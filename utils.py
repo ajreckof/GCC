@@ -9,6 +9,7 @@ from sklearn.manifold import MDS
 import logging as log
 import sys
 from matplotlib.colors import hsv_to_rgb
+import time
 
 
 # configure logger for info level
@@ -33,7 +34,7 @@ def is_iterable(value):
 
 
 
-def get_evenly_spaced_colors(N, saturation = 1.0, value= 0.5):
+def get_evenly_spaced_colors(N, saturation = 1.0, value= 1.0):
 	# Calculate equally spaced hue values
 	hues = np.linspace(0, 1, N, endpoint= False)
 	saturations = np.full_like(hues, saturation)
@@ -82,7 +83,6 @@ def plot_offset_lines(ax, points, number_of_lines, line_index, total_linewidth =
 		)
 	
 	label_to_handles = { label : handle for handle, label in zip(*ax.get_legend_handles_labels()) }
-	print(label_to_handles)
 	ax.legend(handles=label_to_handles.values(), labels=label_to_handles.keys())  
 
 
@@ -91,7 +91,7 @@ def print_solution(problem, solutions, name_to_label, **kwargs):
 	colors = get_evenly_spaced_colors(len(solutions))
 
 	#Dessin du résultat
-	fig = plt.figure()
+	fig = plt.figure(figsize=(15,15))
 	fig.suptitle(problem.name)
 	ax = fig.add_subplot()
 	number_of_solutions = len(solutions)
@@ -155,7 +155,7 @@ def get_positions(problem):
 
 def get_distance_matrix(problem):
 	G = problem.get_graph()
-	return nx.to_numpy_matrix(G)
+	return nx.to_numpy_array(G)
 
 
 def check_best_solution(problem):
@@ -190,7 +190,7 @@ def find_solution_one_solver(problem :  tsplib95.models.Problem, solver, verbose
 	return status, solution, path_length
 
 
-def find_solution(problem, solvers, solution_check= True, folder = "TSP_instances/"):
+def find_solution(problem, solvers, solution_check= True, folder = "TSP_instances/", solution_save_file = "save.csv"):
 
 	if isinstance(problem, str):
 		# load tsp instance
@@ -204,13 +204,20 @@ def find_solution(problem, solvers, solution_check= True, folder = "TSP_instance
 	if not is_iterable(solvers):
 		solvers = { "ours" : solvers}
 	
-	statuses, solutions, paths_length = {}, {}, {}
+	statuses, solutions, paths_length, times = {}, {}, {}, {}
 	if solution_check :
 		solutions["file solution"], paths_length["file solution"] = check_best_solution(problem)
+		times["file solution"] = None
 	for name,solver in solvers.items():
+		log.info(name)
+		start = time.time()
 		statuses[name], solutions[name], paths_length[name] = find_solution_one_solver(problem, solver, False, paths_length["file solution"] if solution_check else inf)
+		log.info(name + " DONE ")
+		times[name] = time.time() - start
 
-	print_solution(problem, solutions, lambda name : f"{name}(len : {paths_length[name]})")
+		with open(solution_save_file, "a") as f:
+			f.write(", ".join([name, problem.name, statuses[name], str(paths_length[name]) ]) + "\n") # type: ignore	
+	print_solution(problem, solutions, lambda name : f"{name}(len : {paths_length[name]}, time : {times[name]})")
 
 	
 	return statuses, solutions, paths_length

@@ -13,7 +13,7 @@ outcomes = [
 ]
 
 
-def solve_OrTools(problem, verbose = True, timeout = 60):
+def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constraint = False):
 	dima = get_distance_matrix(problem)
 	solver = cp_model.CpSolver()
 	solver.parameters.max_time_in_seconds = timeout
@@ -85,7 +85,9 @@ def solve_OrTools(problem, verbose = True, timeout = 60):
 		log.info(f'Creating {len(all_but_first_nodes)} Constraint 3.2... ')
 	for i in all_but_first_nodes:
 		for j in all_but_first_nodes:
-			model.Add(u[i] - u[j] + 1 <= (num_nodes - 1) * (1 - x[i,j]))
+			model.Add(u[i] - u[j] + 1 <= num_nodes * (1 - x[i,j]))
+			if supplementary_constraint:
+				model.Add(u[i] - u[j] + 1 >= - num_nodes * (1 - x[i,j]))
 
 
 
