@@ -18,47 +18,27 @@ def ant_chemin(n_points, pheromone, distance, alpha, beta, *args):
 	while True in nonvisite:
 		nonvisite_indices = np.where(nonvisite)[0]
 		probabilites = np.zeros(len(nonvisite_indices))
+		
 		#Ici, la fameuse partie haute de la formule des probas [τC(vj)]^α.[ηC(vj)]^β
 		for i, point_nonvisite in enumerate(nonvisite_indices):
 			probabilites[i] = pheromone[point_actuel, point_nonvisite]**alpha / distance[point_actuel,point_nonvisite]**beta
-		#divisé par leur somme donc
+			
+		#Divisé par leur somme donc
 		probabilites /= np.sum(probabilites)
-
+		
 		#On choisit le point en f° des probas
 		point_suivant = np.random.choice(nonvisite_indices, p=probabilites)
 		chemin.append(point_suivant)
 		chemin_long += distance[point_actuel,point_suivant]
 		nonvisite[point_suivant] = False
 		point_actuel = point_suivant
-
-	# on cloture la boucle en revenant au point de départ
+	
+	# On cloture la boucle en revenant au point de départ
 	chemin_long += distance[chemin[-1], chemin[0]]
 	
 	return chemin, chemin_long
 
-dh = display(display_id=True)
-skip = False
-
-def show_density_and_wait(pheromone, Tmin, Tmax):
-	global dh, skip
-	plt.xlim(Tmin,Tmax)
-	plt.ylim(0,1)
-	if skip : 
-		return
-
-	data = pheromone.flatten()
-	histplot(data, kde= True, bins= np.linspace(Tmin,Tmax, 30,True), stat= "probability")
-	dh.update(plt.gcf())
-	plt.close()
-	if input() != "":
-		skip = True
-
 def ACO(problem, n_fourmis=50, n_iterations=200, alpha=2, beta=2, taux_evaporation=0.5, Q=1, Tmin=1, Tmax=20, verbose = True, n_process = None, time_out = 60):
-	global dh, skip
-	dh = display(display_id=True)
-	skip = True
-
-
 	
 	#On initialise le tableau des phéromones pour chaque edge à 1 et on fait un best_path le pire possible pour initialiser
 	distance = get_distance_matrix(problem)
@@ -70,14 +50,11 @@ def ACO(problem, n_fourmis=50, n_iterations=200, alpha=2, beta=2, taux_evaporati
 
 	pheromone = np.ones((n_points, n_points))*Tmax
 	meilleur_chemin = None
-	meilleur_chemin_long = np.inf
-	meilleur_chemin_fourmi=[]
-	meilleur_chemin_episode=[]
+	meilleur_chemin_long = np.mean(distance)
 	start_time = time.time()
-	episode_depuis_meilleure = 0
 	#A chaque iteration, on recherche les chemins donc on vide chemins et chemins_long
 	with Pool(n_process) as pool :
-		while episode_depuis_meilleure < n_iterations and time.time() < start_time + time_out :
+		while time.time() < start_time + time_out :
 			chemins = []
 			chemins_long = []
 			func = partial(ant_chemin, n_points, pheromone, distance, alpha, beta)
@@ -90,23 +67,16 @@ def ACO(problem, n_fourmis=50, n_iterations=200, alpha=2, beta=2, taux_evaporati
 				if chemin_long < meilleur_chemin_long:
 					meilleur_chemin = chemin
 					meilleur_chemin_long = chemin_long
-					episode_depuis_meilleure = 0
-				meilleur_chemin_fourmi+=[meilleur_chemin_long]
 			#On évapore les phéromones
 			pheromone *= taux_evaporation
-
-			last_best = meilleur_chemin_long if meilleur_chemin_episode else np.mean(distance)
+			
 			# on mets à jour les pheromones
 			for chemin, chemin_long in zip(chemins, chemins_long):
 				for i in range(n_points-1):
-					pheromone[chemin[i], chemin[i+1]] += last_best * Q/chemin_long
-				pheromone[chemin[-1], chemin[0]] += last_best * Q/chemin_long
-			
-			meilleur_chemin_episode+=[meilleur_chemin_long]
-			episode_depuis_meilleure += 1
+					pheromone[chemin[i], chemin[i+1]] += meilleur_chemin_long * Q/chemin_long
+				pheromone[chemin[-1], chemin[0]] += meilleur_chemin_long * Q/chemin_long
 
 			#On applique les bornes Tmin et Tmax
 			pheromone = np.clip(pheromone, Tmin, Tmax)
-			show_density_and_wait(pheromone,Tmin,Tmax)
 
 	return "FEASIBLE", meilleur_chemin, meilleur_chemin_long
