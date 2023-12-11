@@ -1,15 +1,18 @@
-import tsplib95
-import networkx as nx
-import os
-import re
-from math import inf
+
+from matplotlib.colors import hsv_to_rgb
+from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.manifold import MDS
 import logging as log
+import networkx as nx
+from math import inf
+import numpy as np
+import tsplib95
+import os
+import re
 import sys
-from matplotlib.colors import hsv_to_rgb
 import time
+
 
 
 # configure logger for info level
@@ -111,7 +114,31 @@ def print_solution(problem, solutions, name_to_label, **kwargs):
 	ax.set_ylabel('Y')
 	plt.show()
 
+def pivot_and_plot(df, max_n = 4, value = 'time'):
+    pivot_table = df.pivot_table(index='solver', columns='problem', values=value)
+    n = pivot_table.shape[1]//max_n + 1
+    # Plot each 'problem' in a separate subplot
+    fig = plt.figure( figsize=(3 * max_n, 3 *n))
+    colors = get_evenly_spaced_colors(len(pivot_table.index))
+        
+    for i, problem in enumerate(pivot_table.columns):
+        ax = plt.subplot(n, max_n, i+1)
+        pivot_table.plot.bar(y=problem, use_index = True, color = colors, ax = ax,)
+        ax.set_title(f'Problem = {problem}')
+        ax.set_xticks([]) 
+        
+        # Hide the legend on individual subplots
+        ax.get_legend().remove()
+    
+    legend_labels = [f'{solver}' for solver in pivot_table.index]
 
+    legend_handles = [Line2D([0], [0], color=color, linewidth=4) for color in colors]
+    
+    fig.legend(legend_handles, legend_labels, title='Legend',
+                              bbox_to_anchor=(1, 0), loc='lower right')
+
+    plt.tight_layout()
+    plt.show()
 
 ## utils function for handling tsplib95 problems
 
@@ -191,7 +218,12 @@ def find_solution_one_solver(problem :  tsplib95.models.Problem, solver, verbose
 
 
 def find_solution(problem, solvers, solution_check= True, folder = "TSP_instances/", solution_save_file = "save.csv", verbose = True):
-
+	try : 
+		with open(solution_save_file, "r"):
+			pass
+	except FileNotFoundError :
+		with open(solution_save_file, "a") as f:
+			f.write("model,problem,status,len,time")
 	if isinstance(problem, str):
 		# load tsp instance
 		problem = tsplib95.load(folder + problem)
@@ -222,7 +254,7 @@ def find_solution(problem, solvers, solution_check= True, folder = "TSP_instance
 			log.info(name + " DONE ")
 
 		with open(solution_save_file, "a") as f:
-			f.write(", ".join([name, problem.name, statuses[name], str(paths_length[name]), str(times[name]) ]) + "\n") # type: ignore	
+			f.write(",".join([name, problem.name, statuses[name], str(paths_length[name]), str(times[name]) ]) + "\n") # type: ignore	
 	if verbose:
 		print_solution(problem, solutions, lambda name : f"{name}(len : {paths_length[name]}, time : {times[name]})")
 
