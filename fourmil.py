@@ -57,6 +57,9 @@ def ACO(problem, n_fourmis=50, n_iterations=200, alpha=2, beta=2, taux_evaporati
 	global dh, skip
 	dh = display(display_id=True)
 	skip = True
+
+
+	
 	#On initialise le tableau des phéromones pour chaque edge à 1 et on fait un best_path le pire possible pour initialiser
 	distance = get_distance_matrix(problem)
 	n_points = problem.dimension
