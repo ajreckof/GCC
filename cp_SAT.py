@@ -13,7 +13,7 @@ outcomes = [
 ]
 
 
-def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constraint = False):
+def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constraint = False, enforce = False):
 	dima = get_distance_matrix(problem)
 	solver = cp_model.CpSolver()
 	solver.parameters.max_time_in_seconds = timeout
@@ -41,9 +41,6 @@ def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constrain
 	for i in all_nodes:
 		for j in all_nodes:
 			x[i, j] = model.NewBoolVar(f'x_i{i}j{j}')
-
-
-
 
 	# constraint 1: leave every point exactly once
 	if verbose :
@@ -85,9 +82,16 @@ def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constrain
 		log.info(f'Creating {len(all_but_first_nodes)} Constraint 3.2... ')
 	for i in all_but_first_nodes:
 		for j in all_but_first_nodes:
-			model.Add(u[i] - u[j] + 1 <= num_nodes * (1 - x[i,j]))
-			if supplementary_constraint:
-				model.Add(u[i] - u[j] + 1 >= - num_nodes * (1 - x[i,j]))
+			if enforce :
+				model.Add(u[i] < u[j]).OnlyEnforceIf(x[i,j])
+				if supplementary_constraint:
+					model.Add(u[i] + 2 > u[j]).OnlyEnforceIf(x[i,j])
+
+			else :
+				model.Add(u[i] - u[j] + 1 <= num_nodes * (1 - x[i,j]))
+				if supplementary_constraint:
+					model.Add(u[i] - u[j] + 1 >= - num_nodes * (1 - x[i,j]))
+
 
 
 

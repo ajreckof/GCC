@@ -190,7 +190,7 @@ def find_solution_one_solver(problem :  tsplib95.models.Problem, solver, verbose
 	return status, solution, path_length
 
 
-def find_solution(problem, solvers, solution_check= True, folder = "TSP_instances/", solution_save_file = "save.csv"):
+def find_solution(problem, solvers, solution_check= True, folder = "TSP_instances/", solution_save_file = "save.csv", verbose = True):
 
 	if isinstance(problem, str):
 		# load tsp instance
@@ -199,7 +199,8 @@ def find_solution(problem, solvers, solution_check= True, folder = "TSP_instance
 	if not isinstance(problem, tsplib95.models.Problem):
 		raise TypeError(f" problem must be either a tsplib95 problem or a string but found type : {type(problem)}")
 
-	log.info(problem.name)
+	if verbose:
+		log.info(problem.name)
 
 	if not is_iterable(solvers):
 		solvers = { "ours" : solvers}
@@ -209,15 +210,21 @@ def find_solution(problem, solvers, solution_check= True, folder = "TSP_instance
 		solutions["file solution"], paths_length["file solution"] = check_best_solution(problem)
 		times["file solution"] = None
 	for name,solver in solvers.items():
-		log.info(name)
+		
+		if verbose:
+			log.info(name)
+
 		start = time.time()
 		statuses[name], solutions[name], paths_length[name] = find_solution_one_solver(problem, solver, False, paths_length["file solution"] if solution_check else inf)
-		log.info(name + " DONE ")
 		times[name] = time.time() - start
 
+		if verbose:
+			log.info(name + " DONE ")
+
 		with open(solution_save_file, "a") as f:
-			f.write(", ".join([name, problem.name, statuses[name], str(paths_length[name]) ]) + "\n") # type: ignore	
-	print_solution(problem, solutions, lambda name : f"{name}(len : {paths_length[name]}, time : {times[name]})")
+			f.write(", ".join([name, problem.name, statuses[name], str(paths_length[name]), str(times[name]) ]) + "\n") # type: ignore	
+	if verbose:
+		print_solution(problem, solutions, lambda name : f"{name}(len : {paths_length[name]}, time : {times[name]})")
 
 	
 	return statuses, solutions, paths_length
