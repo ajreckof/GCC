@@ -60,7 +60,7 @@ def incompletOR(problem, verbose):
 
 
     #Résultat
-    chemin=[]
+    chemin=[0]
     route_distance=0
     index = routing.Start(0)
     while not routing.IsEnd(index):
@@ -68,8 +68,7 @@ def incompletOR(problem, verbose):
         index = solution.Value(routing.NextVar(index))
         chemin+=[index]
         route_distance += data["distances"][previous_index][index]
-    chemin+=[0]
-    route_distance += data["distances"][previous_index][index]
+    route_distance += data["distances"][index][0]
     return "FEASIBLE",chemin,route_distance
 
     

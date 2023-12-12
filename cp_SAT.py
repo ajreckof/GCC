@@ -13,7 +13,7 @@ outcomes = [
 ]
 
 
-def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constraint = False, enforce = False):
+def solve_OrTools(problem, verbose = True, timeout = 20, supplementary_constraint = False, enforce = True, strategies= None, force_strategy = False):
 	dima = get_distance_matrix(problem)
 	solver = cp_model.CpSolver()
 	solver.parameters.max_time_in_seconds = timeout
@@ -83,14 +83,12 @@ def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constrain
 	for i in all_but_first_nodes:
 		for j in all_but_first_nodes:
 			if enforce :
-				model.Add(u[i] < u[j]).OnlyEnforceIf(x[i,j])
-				if supplementary_constraint:
-					model.Add(u[i] + 2 > u[j]).OnlyEnforceIf(x[i,j])
-
+				model.Add(u[i] + 1 == u[j]).OnlyEnforceIf(x[i,j])
 			else :
 				model.Add(u[i] - u[j] + 1 <= num_nodes * (1 - x[i,j]))
 				if supplementary_constraint:
 					model.Add(u[i] - u[j] + 1 >= - num_nodes * (1 - x[i,j]))
+
 
 
 
@@ -100,9 +98,16 @@ def solve_OrTools(problem, verbose = True, timeout = 60, supplementary_constrain
 	# Minimize the total distance
 	model.Minimize(sum(dima[i,j] * x[i,j] for i in all_nodes for j in all_nodes))
 
+	if strategies :
+		strategie_u, strategie_x = strategies
+		model.AddDecisionStrategy(u, *strategie_u)
+		model.AddDecisionStrategy(x.values(), *strategie_x)
+		if force_strategy:
+			solver.parameters.search_branching = cp_model.FIXED_SEARCH
+	
 	if verbose :
 		log.info('Solving MIP model... ')
-	status = solver.Solve(model)
+	status = solver.Solve(model,)
 
 	solution = [0] * dima.shape[0]
 	for i, var in enumerate(u):

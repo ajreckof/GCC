@@ -94,7 +94,7 @@ def print_solution(problem, solutions, name_to_label, **kwargs):
 	colors = get_evenly_spaced_colors(len(solutions))
 
 	#Dessin du résultat
-	fig = plt.figure(figsize=(15,15))
+	fig = plt.figure(figsize=(10,10))
 	fig.suptitle(problem.name)
 	ax = fig.add_subplot()
 	number_of_solutions = len(solutions)
@@ -124,13 +124,20 @@ def pivot_and_plot(df, max_n = 4, value = 'time'):
 				df = df.sort_index()  # sorting by index
 	grouped_df =df.groupby(["problem", "solver"])
 	grouped_df_mean = grouped_df.mean()
+	
+
+
 	pivot_table = grouped_df_mean.pivot_table(index='solver', columns='problem', values=value)
+	
 	n = pivot_table.shape[1]//max_n + 1
     # Plot each 'problem' in a separate subplot
 	fig = plt.figure(figsize=(3 * max_n, 3 *n))
 	colors = get_evenly_spaced_colors(len(pivot_table.index))
-        
-	for i, problem in enumerate(pivot_table.columns):
+    
+	problems = [ problem for problem in pivot_table.columns]
+	problems.sort(key = find_number_of_nodes)
+
+	for i, problem in enumerate(problems):
 		ax = plt.subplot(n, max_n, i+1)
 		pivot_table.plot.bar(y=problem, use_index = True, color = colors, ax = ax,)
 		ax.set_title(f'Problem = {problem}')
@@ -152,6 +159,7 @@ def pivot_and_plot(df, max_n = 4, value = 'time'):
 ## utils function for handling tsplib95 problems
 
 def find_number_of_nodes(input_string :  str):
+	input_string = str(input_string)
 	# Use a regular expression to find the number at the end of the string
 	match = re.search(r'\d+$', input_string.removesuffix(".tsp"))
 
@@ -224,13 +232,17 @@ def find_solution_one_solver(problem :  tsplib95.models.Problem, solver, verbose
 	return status, solution, path_length
 
 
-def find_solution(problem, solvers, solution_check= True, folder = "TSP_instances/", solution_save_file = "save.csv", verbose = True):
-	try : 
-		with open(solution_save_file, "r"):
-			pass
-	except FileNotFoundError :
-		with open(solution_save_file, "a") as f:
-			f.write("model,problem,status,len,time")
+def find_solution(problem, solvers, solution_check= True, folder = "TSP_instances/", solution_save_file = "save.csv", verbose = True, visualise_solution = None):
+	if visualise_solution is None:
+		visualise_solution = verbose
+	
+	if solution_save_file :
+		try : 
+			with open(solution_save_file, "r"):
+				pass
+		except FileNotFoundError :
+			with open(solution_save_file, "a") as f:
+				f.write("solver,problem,status,len,time\n")
 	if isinstance(problem, str):
 		# load tsp instance
 		problem = tsplib95.load(folder + problem)
@@ -260,9 +272,10 @@ def find_solution(problem, solvers, solution_check= True, folder = "TSP_instance
 		if verbose:
 			log.info(name + " DONE ")
 
-		with open(solution_save_file, "a") as f:
-			f.write(",".join([name, problem.name, statuses[name], str(paths_length[name]), str(times[name]) ]) + "\n") # type: ignore	
-	if verbose:
+		if solution_save_file:
+			with open(solution_save_file, "a") as f:
+				f.write(",".join([name, problem.name, statuses[name], str(paths_length[name]), str(times[name]) ]) + "\n") # type: ignore	
+	if visualise_solution:
 		print_solution(problem, solutions, lambda name : f"{name}(len : {paths_length[name]}, time : {times[name]})")
 
 	
