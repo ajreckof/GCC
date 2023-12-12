@@ -38,7 +38,7 @@ def ant_chemin(n_points, pheromone, distance, alpha, beta, *args):
 	
 	return chemin, chemin_long
 
-def ACO(problem, n_fourmis=50, n_iterations=200, alpha=2, beta=2, taux_evaporation=0.5, Q=1, Tmin=1, Tmax=20, verbose = True, n_process = None, time_out = 60):
+def ACO(problem, n_fourmis=20, n_iterations=100, alpha=2, beta=2, taux_evaporation=0.5, Q=1, Tmin=1, Tmax=20, verbose = True, n_process = None, time_out = 1):
 	
 	#On initialise le tableau des phéromones pour chaque edge à 1 et on fait un best_path le pire possible pour initialiser
 	distance = get_distance_matrix(problem)
@@ -50,7 +50,7 @@ def ACO(problem, n_fourmis=50, n_iterations=200, alpha=2, beta=2, taux_evaporati
 
 	pheromone = np.ones((n_points, n_points))*Tmax
 	meilleur_chemin = None
-	meilleur_chemin_long = np.mean(distance)
+	meilleur_chemin_long = np.mean(distance)*n_points
 	start_time = time.time()
 	#A chaque iteration, on recherche les chemins donc on vide chemins et chemins_long
 	with Pool(n_process) as pool :

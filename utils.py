@@ -115,30 +115,39 @@ def print_solution(problem, solutions, name_to_label, **kwargs):
 	plt.show()
 
 def pivot_and_plot(df, max_n = 4, value = 'time'):
-    pivot_table = df.pivot_table(index='solver', columns='problem', values=value)
-    n = pivot_table.shape[1]//max_n + 1
+	if(value == "len"):
+		for problemName in df["problem"].unique():
+			bestSol=check_best_solution(problemName)
+			if(bestSol[0]):
+				df.loc[-1]= ["solution",problemName,bestSol[1], 0]
+				df.index = df.index + 1  # shifting index
+				df = df.sort_index()  # sorting by index
+	grouped_df =df.groupby(["problem", "solver"])
+	grouped_df_mean = grouped_df.mean()
+	pivot_table = grouped_df_mean.pivot_table(index='solver', columns='problem', values=value)
+	n = pivot_table.shape[1]//max_n + 1
     # Plot each 'problem' in a separate subplot
-    fig = plt.figure( figsize=(3 * max_n, 3 *n))
-    colors = get_evenly_spaced_colors(len(pivot_table.index))
+	fig = plt.figure(figsize=(3 * max_n, 3 *n))
+	colors = get_evenly_spaced_colors(len(pivot_table.index))
         
-    for i, problem in enumerate(pivot_table.columns):
-        ax = plt.subplot(n, max_n, i+1)
-        pivot_table.plot.bar(y=problem, use_index = True, color = colors, ax = ax,)
-        ax.set_title(f'Problem = {problem}')
-        ax.set_xticks([]) 
+	for i, problem in enumerate(pivot_table.columns):
+		ax = plt.subplot(n, max_n, i+1)
+		pivot_table.plot.bar(y=problem, use_index = True, color = colors, ax = ax,)
+		ax.set_title(f'Problem = {problem}')
+		ax.set_xticks([]) 
         
         # Hide the legend on individual subplots
-        ax.get_legend().remove()
+		ax.get_legend().remove()
     
-    legend_labels = [f'{solver}' for solver in pivot_table.index]
+	legend_labels = [f'{solver}' for solver in pivot_table.index]
 
-    legend_handles = [Line2D([0], [0], color=color, linewidth=4) for color in colors]
+	legend_handles = [Line2D([0], [0], color=color, linewidth=4) for color in colors]
     
-    fig.legend(legend_handles, legend_labels, title='Legend',
+	fig.legend(legend_handles, legend_labels, title='Legend',
                               bbox_to_anchor=(1, 0), loc='lower right')
 
-    plt.tight_layout()
-    plt.show()
+	plt.tight_layout()
+	plt.show()
 
 ## utils function for handling tsplib95 problems
 
@@ -185,15 +194,13 @@ def get_distance_matrix(problem):
 	return nx.to_numpy_array(G)
 
 
-def check_best_solution(problem):
-	if problem.tours : 
-		return problem.tours[0], problem.trace_tours(problem.tours)[0]
-	else :
-		try:
-			sol = tsplib95.load_solution("TSP_Instances/opt.tour/" + problem.name.removesuffix(".tsp") + ".opt.tour")
-			return [i-1 for i in sol.tours[0]], problem.trace_tours(sol.tours)[0]
-		except FileNotFoundError:
-			return [], inf
+def check_best_solution(name):
+	try:
+		sol = tsplib95.load_solution("TSP_Instances/opt.tour/" + name.removesuffix(".tsp") + ".opt.tour")
+		problem = tsplib95.load("TSP_Instances/" + name.removesuffix(".tsp") + ".tsp" )
+		return [i-1 for i in sol.tours[0]], problem.trace_tours(sol.tours)[0]
+	except FileNotFoundError:
+		return [], inf
 
 
 
@@ -239,7 +246,7 @@ def find_solution(problem, solvers, solution_check= True, folder = "TSP_instance
 	
 	statuses, solutions, paths_length, times = {}, {}, {}, {}
 	if solution_check :
-		solutions["file solution"], paths_length["file solution"] = check_best_solution(problem)
+		solutions["file solution"], paths_length["file solution"] = check_best_solution(problem.name)
 		times["file solution"] = None
 	for name,solver in solvers.items():
 		
